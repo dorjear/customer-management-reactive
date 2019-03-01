@@ -38,7 +38,7 @@ public class CustomerServiceImplMockTest {
         // Arrange
         when(customerRepository.findById(5)).thenReturn(Optional.of(customer));
         // Act
-        Customer retrievedCustomer = customerServiceImpl.getCustomerById(5);
+        Customer retrievedCustomer = customerServiceImpl.getCustomerById(5).block();
         // Assert
         assertThat(retrievedCustomer, is(equalTo(customer)));
 
@@ -48,7 +48,7 @@ public class CustomerServiceImplMockTest {
         // Arrange
         when(customerRepository.save(customer)).thenReturn(customer);
         // Act
-        Customer savedCustomer = customerServiceImpl.saveCustomer(customer);
+        Customer savedCustomer = customerServiceImpl.saveCustomer(customer).block();
         // Assert
         assertThat(savedCustomer, is(equalTo(customer)));
     }

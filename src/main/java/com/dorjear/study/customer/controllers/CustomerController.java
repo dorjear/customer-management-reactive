@@ -1,28 +1,21 @@
 package com.dorjear.study.customer.controllers;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
+import com.dorjear.study.customer.domain.Customer;
+import com.dorjear.study.customer.services.CustomerService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AuthorizationServiceException;
 import org.springframework.security.core.Authentication;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import com.dorjear.study.customer.domain.Customer;
-import com.dorjear.study.customer.services.CustomerService;
-
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
+import static reactor.core.publisher.Mono.fromRunnable;
 
 @RestController
 @RequestMapping("/customer")
@@ -42,50 +35,45 @@ public class CustomerController {
 
     @ApiOperation(value = "View a list of available customers")
     @RequestMapping(value = "/list", method = RequestMethod.GET, produces = "application/json")
-    public List<Customer> list(Model model) {
-        Iterable<Customer> customerList = customerService.listAllCustomers();
-        return StreamSupport.stream(customerList.spliterator(), false).collect(Collectors.toList());
+    public Flux<Customer> list() {
+        return customerService.listAllCustomers();
     }
 
     @ApiOperation(value = "Search a customer with an ID", response = Customer.class)
     @RequestMapping(value = "/show/{id}", method = RequestMethod.GET, produces = "application/json")
-    public Customer showcustomer(@PathVariable Integer id, Authentication authentication) {
-        Customer customer = customerService.getCustomerById(id);
-        verify(authentication, customer);
-        return customer;
+    public Mono<Customer> showcustomer(@PathVariable Integer id, Authentication authentication) {
+        return customerService.getCustomerById(id).doOnNext(c -> verify(authentication, c));
     }
+
 
     private void verify(Authentication authentication, Customer customer) {
         if(authentication == null || customer==null) return;
         String userDetails = (String) authentication.getPrincipal();
-        if(authentication.getAuthorities().stream().filter(auth -> "ROLE_ADMIN".equals(auth.getAuthority())).count()==0 && !customer.getCustomerId().equals(userDetails)) throw new AuthorizationServiceException("Not authorized");
+        if(authentication.getAuthorities().stream().noneMatch(auth -> "ROLE_ADMIN".equals(auth.getAuthority())) && !customer.getCustomerId().equals(userDetails)) throw new AuthorizationServiceException("Not authorized");
     }
 
     @ApiOperation(value = "Add a customer")
     @RequestMapping(value = "/add", method = RequestMethod.POST, produces = "application/json")
-    public ResponseEntity<String> saveCustomer(@RequestBody Customer customer) {
-        customerService.saveCustomer(customer);
-        return new ResponseEntity<String>("Customer saved successfully", HttpStatus.OK);
+    public Mono<ResponseEntity<String>> saveCustomer(@RequestBody Customer customer) {
+        return customerService.saveCustomer(customer).map(newCust -> new ResponseEntity<>("Customer saved successfully", HttpStatus.OK));
     }
 
     @ApiOperation(value = "Update a customer")
     @RequestMapping(value = "/update/{id}", method = RequestMethod.PUT, produces = "application/json")
-    public ResponseEntity<String> updateCustomer(@PathVariable Integer id, @RequestBody Customer customer, Authentication authentication) {
-        Customer storedCustomer = customerService.getCustomerById(id);
-        verify(authentication, storedCustomer);
-        storedCustomer.setFirstName(customer.getFirstName());
-        storedCustomer.setLastName(customer.getLastName());
-        storedCustomer.setDateOfBirth(customer.getDateOfBirth());
-        customerService.saveCustomer(storedCustomer);
-        return new ResponseEntity<String>("Customer updated successfully", HttpStatus.OK);
+    public Mono<ResponseEntity<String>> updateCustomer(@PathVariable Integer id, @RequestBody Customer customer, Authentication authentication) {
+        return customerService.getCustomerById(id).flatMap(storedCustomer -> {
+            verify(authentication, storedCustomer);
+            storedCustomer.setFirstName(customer.getFirstName());
+            storedCustomer.setLastName(customer.getLastName());
+            storedCustomer.setDateOfBirth(customer.getDateOfBirth());
+            return customerService.saveCustomer(storedCustomer).map(newCust -> new ResponseEntity<>("Customer updated successfully", HttpStatus.OK));
+        });
     }
 
     @ApiOperation(value = "Delete a customer")
     @RequestMapping(value = "/delete/{id}", method = RequestMethod.DELETE, produces = "application/json")
-    public ResponseEntity<String> delete(@PathVariable Integer id) {
-        customerService.deleteCustomer(id);
-        return new ResponseEntity<String>("Customer deleted successfully", HttpStatus.OK);
-
+    public Mono<ResponseEntity<String>> delete(@PathVariable Integer id) {
+        return fromRunnable(() -> customerService.deleteCustomer(id)).map(aVoid -> new ResponseEntity<>("Customer deleted successfully", HttpStatus.OK));
     }
 
 }

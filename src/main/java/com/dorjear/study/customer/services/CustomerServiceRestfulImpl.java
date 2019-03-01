@@ -42,7 +42,7 @@ public class CustomerServiceRestfulImpl implements CustomerService {
     @Override
     public Flux<Customer> listAllCustomers() {
         logger.debug("listAllCustomers called");
-        return webClient.get().uri(listUrl)
+        return webClient.get().uri(baseUrl + listUrl)
                 .exchange().subscribeOn(Schedulers.elastic()).timeout(Duration.ofSeconds(2))
                 .flatMapMany(r -> r.bodyToFlux(Customer.class));
     }
@@ -50,7 +50,7 @@ public class CustomerServiceRestfulImpl implements CustomerService {
     @Override
     public Mono<Customer> getCustomerById(Integer id) {
         logger.debug("getCustomerById called");
-        return webClient.get().uri(detailUrl+id)
+        return webClient.get().uri(baseUrl + detailUrl + id)
                 .exchange().subscribeOn(Schedulers.elastic()).timeout(Duration.ofSeconds(2))
                 .flatMap(r -> r.bodyToMono(Customer.class));
     }
@@ -58,7 +58,7 @@ public class CustomerServiceRestfulImpl implements CustomerService {
     @Override
     public Mono<Customer> saveCustomer(Customer customer) {
         logger.debug("saveCustomer called");
-        return webClient.post().uri(createUrl).body(BodyInserters.fromObject(customer))
+        return webClient.post().uri(baseUrl + createUrl).body(BodyInserters.fromObject(customer))
                 .exchange().subscribeOn(Schedulers.elastic()).timeout(Duration.ofSeconds(2))
                 .flatMap(r -> r.bodyToMono(Customer.class));
     }
@@ -66,7 +66,7 @@ public class CustomerServiceRestfulImpl implements CustomerService {
     @Override
     public void deleteCustomer(Integer id) {
         logger.debug("deleteCustomer called");
-        webClient.delete().uri(deleteUrl)
+        webClient.delete().uri(baseUrl + deleteUrl + id)
                 .exchange().subscribeOn(Schedulers.elastic()).timeout(Duration.ofSeconds(2));
     }
 }
