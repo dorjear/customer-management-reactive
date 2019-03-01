@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 
 import com.dorjear.study.customer.domain.Customer;
 import com.dorjear.study.customer.repositories.CustomertRepository;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
@@ -23,21 +25,21 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public List<Customer> listAllCustomers() {
+    public Flux<Customer> listAllCustomers() {
         logger.debug("listAllCustomers called");
-        return StreamSupport.stream(customerRepository.findAll().spliterator(), false).collect(Collectors.toList());
+        return Flux.fromIterable(customerRepository.findAll());
     }
 
     @Override
-    public Customer getCustomerById(Integer id) {
+    public Mono<Customer> getCustomerById(Integer id) {
         logger.debug("getCustomerById called");
-        return customerRepository.findById(id).orElse(null);
+        return Mono.fromCallable(()->customerRepository.findById(id).orElse(null));
     }
 
     @Override
-    public Customer saveCustomer(Customer customer) {
+    public Mono<Customer> saveCustomer(Customer customer) {
         logger.debug("saveCustomer called");
-        return customerRepository.save(customer);
+        return Mono.fromCallable(()->customerRepository.save(customer));
     }
 
     @Override

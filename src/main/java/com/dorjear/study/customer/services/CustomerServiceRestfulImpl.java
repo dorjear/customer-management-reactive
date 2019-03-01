@@ -1,17 +1,18 @@
 package com.dorjear.study.customer.services;
 
-import java.util.List;
+import java.time.Duration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
 
 import com.dorjear.study.customer.domain.Customer;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+
 /**
  * 
  * @author dorjear
@@ -22,9 +23,9 @@ import com.dorjear.study.customer.domain.Customer;
 //@Service("customerServiceRestful")
 public class CustomerServiceRestfulImpl implements CustomerService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    
-    private RestTemplate restTemplate;
-    
+
+    @Value("${crms.baseUrl}")
+    private String baseUrl;
     @Value("${crms.listUrl}")
     private String listUrl;
     @Value("${crms.detailUrl}")
@@ -35,34 +36,37 @@ public class CustomerServiceRestfulImpl implements CustomerService {
     private String updateUrl;
     @Value("${crms.deleteUrl}")
     private String deleteUrl;
-    
-    @Autowired
-    public void setCustomerRepository(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
-    }
+
+    private WebClient webClient = WebClient.builder().baseUrl(baseUrl).build();
 
     @Override
-    public List<Customer> listAllCustomers() {
+    public Flux<Customer> listAllCustomers() {
         logger.debug("listAllCustomers called");
-        ResponseEntity<List<Customer>> response = restTemplate.exchange(listUrl, HttpMethod.GET, null, new ParameterizedTypeReference<List<Customer>>(){});
-        return response.getBody();
+        return webClient.get().uri(listUrl)
+                .exchange().subscribeOn(Schedulers.elastic()).timeout(Duration.ofSeconds(2))
+                .flatMapMany(r -> r.bodyToFlux(Customer.class));
     }
 
     @Override
-    public Customer getCustomerById(Integer id) {
+    public Mono<Customer> getCustomerById(Integer id) {
         logger.debug("getCustomerById called");
-        return restTemplate.getForObject(detailUrl+id, Customer.class);
+        return webClient.get().uri(detailUrl+id)
+                .exchange().subscribeOn(Schedulers.elastic()).timeout(Duration.ofSeconds(2))
+                .flatMap(r -> r.bodyToMono(Customer.class));
     }
 
     @Override
-    public Customer saveCustomer(Customer customer) {
+    public Mono<Customer> saveCustomer(Customer customer) {
         logger.debug("saveCustomer called");
-        return restTemplate.postForObject(createUrl, customer, Customer.class);
+        return webClient.post().uri(createUrl).body(BodyInserters.fromObject(customer))
+                .exchange().subscribeOn(Schedulers.elastic()).timeout(Duration.ofSeconds(2))
+                .flatMap(r -> r.bodyToMono(Customer.class));
     }
 
     @Override
     public void deleteCustomer(Integer id) {
         logger.debug("deleteCustomer called");
-        restTemplate.delete(deleteUrl+id);
+        webClient.delete().uri(deleteUrl)
+                .exchange().subscribeOn(Schedulers.elastic()).timeout(Duration.ofSeconds(2));
     }
 }
