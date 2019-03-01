@@ -1,7 +1,7 @@
-# customer-management-basic
+# customer-management-reactive
 This example is to enable the customers of the organisation to manage their profile (end to end i.e. create, update and delete) through web channel and mobile (app) channel. 
 
-This example provide API to list, get, create, update, delete customers with the Oauth2 authentication with the following assumtions:
+This example provide reactive API to list, get, create, update, delete customers with the Oauth2 authentication with the following assumtions:
 1. The backend system is an enterprise CRM and is not yet ready to expose REST APIs. The CRM team is in the process of designing their REST APIs. 
 2. Oauth2 Client and users are set in-memory. Will be updated to DB based authentication in stage 2
 3. Mobile and Web FE will use the same oauth mechanism with different client ID and different expiry time. 
@@ -14,4 +14,4 @@ High level design:
 4. Only users with admin group can access list/create/delete. Customer can access show/update on their own profile. 
 5. Currently customer profile is stored in DB (in-memory) and is going to integration a downstream CRM system with restful webservices. The implementaion will be marked as TODO
 
-Will be upgraded to Kotlin and WebFlux later on
+Will be upgraded to Kotlin later on
