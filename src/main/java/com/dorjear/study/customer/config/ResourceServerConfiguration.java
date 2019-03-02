@@ -6,6 +6,7 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.R
 import org.springframework.web.bind.annotation.RestController;
 
 @EnableResourceServer
+@RestController //Must with @RestController here otherwise not working
 public class ResourceServerConfiguration extends ResourceServerConfigurerAdapter {
 
     @Override
